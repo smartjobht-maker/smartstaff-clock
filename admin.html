@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ניהול נוכחות</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f2f5f9; --surface:#ffffff; --fg:#10263f; --muted:#5b6c82; --line:#d8e0ea;
+  --brand-bg:#12305a; --brand-fg:#ffffff; --teal:#12a5a2;
+  --go:#17914f; --stop:#cf3d36; --warn:#a96a10; --warn-bg:#fdf3dc; --ok-bg:#e2f5ea; --stop-bg:#fde6e4;
+}
+@media (prefers-color-scheme: dark){ :root{
+  --bg:#0a1524; --surface:#13233a; --fg:#e9eff7; --muted:#9fb1c7; --line:#263a52;
+  --brand-bg:#0f294d; --teal:#35d0cc;
+  --go:#35c479; --stop:#f0675f; --warn:#f0b54a; --warn-bg:#3a2c0e; --ok-bg:#12331f; --stop-bg:#401916;
+  color-scheme:dark } }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Rubik",system-ui,"Segoe UI",Arial,sans-serif;font-size:16px;line-height:1.4}
+.wrap{max-width:640px;margin:0 auto;padding-left:16px;padding-right:16px}
+.band{background:var(--brand-bg);color:var(--brand-fg);position:sticky;top:0;z-index:5}
+.band .wrap{padding-top:12px;padding-bottom:12px;display:flex;flex-direction:column;gap:10px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.title{font-weight:700;font-size:19px}
+.ghost{font:inherit;font-size:14px;padding:7px 12px;border-radius:9px;border:1.5px solid rgba(255,255,255,.4);background:transparent;color:#fff;cursor:pointer}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tabs button{font:inherit;font-size:16px;font-weight:500;padding:10px 4px;border-radius:10px;border:1.5px solid rgba(255,255,255,.35);background:transparent;color:#fff;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:#fff;color:#12305a;border-color:#fff}
+main.wrap{padding-top:16px;padding-bottom:40px;display:flex;flex-direction:column;gap:16px}
+h2{font-size:17px;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+h2 small{font-weight:400;color:var(--muted);font-size:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.list{display:flex;flex-direction:column}
+.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);min-width:0}
+.list .row:first-child{border-top:0}
+.row .main{flex:1;min-width:0;display:flex;flex-direction:column}
+.row .name{font-weight:500;overflow-wrap:anywhere}
+.row .sub{font-size:13.5px;color:var(--muted)}
+.row .num{font-variant-numeric:tabular-nums;font-weight:700;font-size:17px;white-space:nowrap;text-align:left}
+.row .num small{display:block;font-weight:400;font-size:12.5px;color:var(--muted)}
+button.row{font:inherit;color:inherit;background:none;border:0;border-top:1px solid var(--line);width:100%;text-align:right;cursor:pointer}
+.edit{font-size:13px;color:var(--teal);font-weight:500;white-space:nowrap}
+.detail{padding:0 0 10px;display:flex;flex-direction:column}
+.detail button{font:inherit;color:inherit;background:none;border:0;border-top:1px dashed var(--line);padding:8px 0;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;cursor:pointer;font-size:14px;text-align:right;width:100%}
+.chip{font-size:12.5px;font-weight:500;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.chip.ok{background:var(--ok-bg);color:var(--go)} .chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.bad{background:var(--stop-bg);color:var(--stop)}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
+.stat b{display:block;font-size:24px;font-variant-numeric:tabular-nums}
+.stat span{font-size:13.5px;color:var(--muted)}
+.monthnav{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.monthnav button{font:inherit;font-size:20px;width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.monthnav b{font-size:18px}
+label{display:flex;flex-direction:column;gap:5px;font-weight:500;font-size:15px}
+input,select{font:inherit;font-size:17px;padding:12px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);width:100%;min-width:0}
+.btn{font:inherit;font-size:17px;font-weight:700;padding:13px;border-radius:10px;border:0;background:var(--brand-bg);color:#fff;cursor:pointer}
+.btn.line{background:transparent;color:var(--fg);border:1.5px solid var(--line);font-weight:500}
+.btn.danger{background:transparent;color:var(--stop);border:1.5px solid var(--stop);font-weight:500}
+.btn:disabled{opacity:.55}
+.inline{display:flex;gap:8px;align-items:flex-end}
+.inline label{flex:1;min-width:0}
+.inline .btn{white-space:nowrap}
+.err{color:var(--stop);font-weight:500;margin:0}
+.empty{color:var(--muted);margin:0}
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(8,18,32,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet .box{background:var(--surface);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px;display:flex;flex-direction:column;gap:12px}
+.sheet h2{font-size:18px}
+.calc{font-variant-numeric:tabular-nums;color:var(--muted);margin:0}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <div class="top"><div class="title">SmartStaff · ניהול נוכחות</div><button type="button" class="ghost" id="reload" hidden>רענון</button></div>
+  <div class="tabs" id="tabs" hidden>
+    <button type="button" data-t="now">עכשיו</button>
+    <button type="button" data-t="month">חודש</button>
+    <button type="button" data-t="workers">עובדים</button>
+  </div>
+</div></div>
+
+<main class="wrap">
+  <section class="panel" id="login" hidden>
+    <h2>כניסת מנהל</h2>
+    <form id="loginForm" style="display:flex;flex-direction:column;gap:10px">
+      <label for="pin">קוד מנהל</label>
+      <input id="pin" type="password" autocomplete="current-password">
+      <p class="err" id="loginErr" role="alert" hidden></p>
+      <button class="btn" type="submit" id="loginBtn">כניסה</button>
+    </form>
+  </section>
+  <p class="empty" id="loading" hidden>טוען…</p>
+  <div id="view" style="display:flex;flex-direction:column;gap:16px"></div>
+</main>
+
+<div class="sheet" id="sheet" hidden>
+  <form class="box" id="editForm" novalidate>
+    <h2 id="eTitle"></h2>
+    <p class="empty" id="eSub"></p>
+    <label id="eWorkerWrap">עובד<select id="eWorker"></select></label>
+    <label>כניסה<input id="eIn" type="datetime-local" required></label>
+    <div class="inline">
+      <label>יציאה (ריק = המשמרת עדיין פתוחה)<input id="eOut" type="datetime-local"></label>
+      <button type="button" class="btn line" id="eNow">עכשיו</button>
+    </div>
+    <label>הפסקה להורדה (דקות)<input id="eBreak" type="number" inputmode="numeric" min="0" max="600" step="1"></label>
+    <p class="calc" id="eCalc"></p>
+    <p class="err" id="eErr" role="alert" hidden></p>
+    <button type="submit" class="btn" id="eSave">שמירה</button>
+    <button type="button" class="btn danger" id="eCancelShift">ביטול המשמרת</button>
+    <button type="button" class="btn danger" id="eCancelSure" hidden>כן, לבטל את המשמרת. היא לא תיספר לתשלום.</button>
+    <button type="button" class="btn line" id="eClose">סגירה בלי שינוי</button>
+  </form>
+</div>
+
+<script>
+(function(){
+var API="{{API}}";
+var FALLBACK_API="https://script.google.com/macros/s/AKfycbxuPKpyGz3-vljCmhHnRMfUZKH388KcnB57z2h91H2Kqr72WVtO06L3qRelOjYMgA-S/exec";
+if(API.charAt(0)==="{")API=FALLBACK_API;
+var PKEY="ss-admin-pin",pin="",D=null,tab="now",openWorker="",query="",editing=null,saving=false;
+try{pin=localStorage.getItem(PKEY)||"";}catch(e){}
+function $(id){return document.getElementById(id);}
+function el(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
+function p2(n){return ("0"+n).slice(-2);}
+/* כל השעות מוצגות ונקלטות לפי שעון ישראל, גם אם הנייד מוגדר לאזור זמן אחר */
+var FMT=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Jerusalem",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
+function parts(ts){var o={};FMT.formatToParts(new Date(ts)).forEach(function(p){o[p.type]=p.value;});if(o.hour==="24")o.hour="00";return o;}
+function hm(ts){var p=parts(ts);return p.hour+":"+p.minute;}
+function dm(ts){var p=parts(ts);return p.day+"/"+p.month;}
+function wall(ts){var p=parts(ts);return p.year+"-"+p.month+"-"+p.day+"T"+p.hour+":"+p.minute;}
+function dur(min){min=Math.max(0,Math.round(min));return Math.floor(min/60)+":"+p2(min%60);}
+var MONTHS=["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+function ymLabel(s){var a=s.split("-");return MONTHS[+a[1]-1]+" "+a[0];}
+function ymShift(s,by){var a=s.split("-"),d=new Date(+a[0],+a[1]-1+by,1);return d.getFullYear()+"-"+p2(d.getMonth()+1);}
+// משמרת: [שם, טלפון, אתר, כניסה, יציאה, הפסקה בדקות, סטטוס, שורה בגיליון]
+var HE=[["Pending approval","ממתין לאישור"],["Self-reported","דיווח עצמי"],["Edited manually","תוקן בגיליון"],["Edited by admin","תוקן ע״י מנהל"],["Added by admin","נוסף ע״י מנהל"],["Missing OUT","חסרה יציאה"],["Unapproved device","נייד לא מאושר"],["Unverified","לא מאומת"],["Offline","נשלח באיחור"],["Open","פתוחה"]];
+function he(t){HE.forEach(function(x){t=t.split(x[0]).join(x[1]);});return t;}
+function mins(s){return s[4]?Math.round((s[4]-s[3])/60000):0;}
+function isMissing(s){return !s[4]&&(s[6].indexOf("Missing OUT")!==-1||D.now-s[3]>(D.caps[s[2]]||15)*3600000);}
+function flagsText(s){return s[6].split(" · ").filter(function(x){return x&&x!=="OK"&&x!=="Open";}).join(" · ");}
+function statusChip(s){
+  if(!s[4])return el("span","chip "+(isMissing(s)?"bad":"ok"),isMissing(s)?"חסרה יציאה":"במשמרת");
+  var f=flagsText(s);
+  return f?el("span","chip warn",he(f)):null;
+}
+function shiftRow(s){
+  var r=el("button","row"),m=el("div","main");r.type="button";
+  m.appendChild(el("span","name",s[0]));
+  m.appendChild(el("span","sub",dm(s[3])+" · "+hm(s[3])+"–"+(s[4]?hm(s[4]):"…")+" · "+s[2]));
+  r.appendChild(m);
+  var c=statusChip(s);if(c)r.appendChild(c);
+  r.appendChild(el("span","num",s[4]?dur(mins(s)):dur((D.now-s[3])/60000)));
+  r.appendChild(el("span","edit","עריכה"));
+  r.onclick=function(){openEdit(s);};
+  return r;
+}
+function section(title,count){
+  var p=el("section","panel"),h=el("h2",null,title);
+  if(count!=null)h.appendChild(el("small",null,String(count)));
+  p.appendChild(h);return p;
+}
+function listOf(items,make,emptyText){
+  if(!items.length)return el("p","empty",emptyText);
+  var l=el("div","list");items.forEach(function(x){l.appendChild(make(x));});return l;
+}
+
+function viewNow(v){
+  var req=D.workers.filter(function(w){return w[6];});
+  if(req.length){
+    var rq=section("בקשות להחלפת נייד",req.length);
+    rq.appendChild(el("p","empty","מישהו נרשם עם הטלפון של העובד מנייד אחר. אשר רק אם העובד באמת החליף נייד."));
+    var l=el("div","list");
+    req.forEach(function(w){
+      var r=el("div","row"),m=el("div","main");
+      m.appendChild(el("span","name",w[0]));m.appendChild(el("span","sub",w[1]+" · "+w[2]));r.appendChild(m);
+      var y=el("button","btn","אישור"),n=el("button","btn danger","דחייה");y.type=n.type="button";
+      y.style.padding=n.style.padding="8px 14px";
+      y.onclick=function(){deviceDecision(w[1],true);};n.onclick=function(){deviceDecision(w[1],false);};
+      r.appendChild(y);r.appendChild(n);l.appendChild(r);
+    });
+    rq.appendChild(l);v.appendChild(rq);
+  }
+  var add=el("button","btn","הוספת משמרת ידנית");add.type="button";add.onclick=function(){openEdit(null);};
+  v.appendChild(add);
+  var open=D.open.slice().sort(function(a,b){return a[3]-b[3];});
+  var a=section("משמרות פתוחות",open.length);
+  a.appendChild(listOf(open,shiftRow,"אף אחד לא במשמרת כרגע."));
+  v.appendChild(a);
+  var rec=D.recent.filter(function(s){return s[4];}).sort(function(x,y){return y[3]-x[3];});
+  var b=section("משמרות שנסגרו ב-48 השעות האחרונות",rec.length);
+  b.appendChild(listOf(rec,shiftRow,"אין משמרות סגורות ב-48 השעות האחרונות."));
+  v.appendChild(b);
+}
+function viewMonth(v){
+  var nav=el("div","monthnav"),prev=el("button",null,"›"),next=el("button",null,"‹");
+  prev.type=next.type="button";prev.setAttribute("aria-label","החודש הקודם");next.setAttribute("aria-label","החודש הבא");
+  prev.onclick=function(){load(ymShift(D.ym,-1));};next.onclick=function(){load(ymShift(D.ym,1));};
+  nav.appendChild(prev);nav.appendChild(el("b",null,ymLabel(D.ym)));nav.appendChild(next);
+  v.appendChild(nav);
+
+  var by={},order=[],tot=0,pay=0,cnt=0,unclosed=[];
+  D.shifts.forEach(function(s){
+    if(!s[4]){unclosed.push(s);return;}
+    var k=s[1];
+    if(!by[k]){by[k]={name:s[0],phone:s[1],min:0,pay:0,list:[]};order.push(k);}
+    var m=mins(s),p=Math.max(0,m-s[5]);by[k].min+=m;by[k].pay+=p;by[k].list.push(s);
+    tot+=m;pay+=p;cnt++;
+  });
+  var st=el("div","stats");
+  [[order.length,"עובדים"],[cnt,"משמרות"],[dur(tot),"שעות נוכחות"],[dur(pay),"שעות לתשלום"]].forEach(function(x){
+    var c=el("div","stat");c.appendChild(el("b",null,String(x[0])));c.appendChild(el("span",null,x[1]));st.appendChild(c);
+  });
+  v.appendChild(st);
+
+  if(unclosed.length){
+    var u=section("בלי יציאה, לא נספרות בסיכום",unclosed.length);
+    u.appendChild(listOf(unclosed.sort(function(a,b){return a[3]-b[3];}),shiftRow,""));
+    v.appendChild(u);
+  }
+
+  var p=section("לפי עובד",order.length);
+  var q=el("input");q.type="search";q.placeholder="חיפוש לפי שם או טלפון";q.value=query;q.id="q";
+  q.oninput=function(){query=q.value;draw();};
+  p.appendChild(q);
+  var holder=el("div","list");p.appendChild(holder);v.appendChild(p);
+  function draw(){
+    holder.textContent="";
+    var keys=order.filter(function(k){var w=by[k];return !query||(w.name+" "+w.phone).indexOf(query.trim())!==-1;})
+      .sort(function(a,b){return by[a].name.localeCompare(by[b].name,"he");});
+    if(!keys.length){holder.appendChild(el("p","empty",order.length?"לא נמצא עובד מתאים.":"אין משמרות סגורות בחודש הזה."));return;}
+    keys.forEach(function(k){
+      var w=by[k],r=el("button","row"),m=el("div","main");r.type="button";
+      r.setAttribute("aria-expanded",openWorker===k);
+      m.appendChild(el("span","name",w.name));
+      m.appendChild(el("span","sub",w.phone+" · "+w.list.length+" משמרות"));
+      r.appendChild(m);
+      var n=el("span","num",dur(w.min));n.appendChild(el("small",null,"לתשלום "+dur(w.pay)));r.appendChild(n);
+      r.onclick=function(){openWorker=openWorker===k?"":k;draw();};
+      holder.appendChild(r);
+      if(openWorker===k){
+        var d=el("div","detail");
+        w.list.slice().sort(function(a,b){return a[3]-b[3];}).forEach(function(s){
+          var line=el("button");line.type="button";
+          line.appendChild(el("span",null,dm(s[3])+" · "+hm(s[3])+"–"+hm(s[4])+(s[5]?" · הפסקה "+s[5]+" ד׳":"")));
+          var right=el("span"),f=flagsText(s);
+          if(f){right.appendChild(el("span","chip warn",he(f)));right.appendChild(document.createTextNode(" "));}
+          right.appendChild(el("b",null,dur(mins(s))));
+          line.appendChild(right);
+          line.onclick=function(){openEdit(s);};
+          d.appendChild(line);
+        });
+        holder.appendChild(d);
+      }
+    });
+  }
+  draw();
+}
+function viewWorkers(v){
+  var ws=D.workers.slice().sort(function(a,b){return (b[3]||0)-(a[3]||0);});
+  var fresh=ws.filter(function(w){return w[4]==="New";}).length;
+  var p=section("עובדים רשומים",ws.length+(fresh?" · "+fresh+" חדשים":""));
+  p.appendChild(listOf(ws,function(w){
+    var r=el("div","row"),m=el("div","main");
+    m.appendChild(el("span","name",w[0]));
+    var sub=el("span","sub");
+    var a=el("a",null,w[1]);a.href="tel:"+w[1];sub.appendChild(a);
+    sub.appendChild(document.createTextNode(" · "+w[2]+(w[5]?" · הפסקה קבועה "+w[5]+" ד׳":"")));
+    m.appendChild(sub);r.appendChild(m);
+    if(w[6])r.appendChild(el("span","chip bad","מבקש להחליף נייד"));
+    if(w[4]==="New")r.appendChild(el("span","chip warn","חדש"));
+    var n=el("span","num",w[3]?dm(w[3]):"—");
+    if(w[3])n.appendChild(el("small",null,parts(w[3]).year+" · "+hm(w[3])));
+    r.appendChild(n);return r;
+  },"עוד לא נרשם אף עובד."));
+  v.appendChild(p);
+}
+function render(){
+  var logged=!!D;
+  $("login").hidden=logged||$("loading").hidden===false;
+  $("tabs").hidden=!logged;$("reload").hidden=!logged;
+  Array.prototype.forEach.call($("tabs").children,function(b){b.setAttribute("aria-pressed",b.dataset.t===tab);});
+  var v=$("view");v.textContent="";
+  if(!logged)return;
+  if(tab==="now")viewNow(v);else if(tab==="month")viewMonth(v);else viewWorkers(v);
+}
+
+/* ---------- עריכה והוספה ---------- */
+var ERR={pin:"הקוד שגוי.",nopin:"עוד לא הוגדר קוד מנהל. כתוב קוד של 4 תווים לפחות בלשונית Settings, בתא J2.",locked:"יותר מדי ניסיונות. נסה שוב בעוד רבע שעה.",net:"אין חיבור. נסה שוב.",
+  time:"השעות לא תקינות. היציאה חייבת להיות אחרי הכניסה, ועד 24 שעות ממנה.",future:"אי אפשר לקבוע שעה עתידית.",overlap:"לעובד יש משמרת אחרת שחופפת לשעות האלה.",changed:"המשמרת השתנתה בגיליון. לחץ רענון ונסה שוב.","break":"ההפסקה חייבת להיות בין 0 ל-600 דקות.",worker:"העובד לא נמצא."};
+function openEdit(s){
+  editing={s:s};
+  $("eTitle").textContent=s?"עריכת משמרת":"הוספת משמרת ידנית";
+  $("eSub").textContent=s?s[0]+" · "+s[1]+" · "+s[2]:"למקרה שעובד שכח להחתים כניסה.";
+  $("eSub").hidden=false;
+  $("eWorkerWrap").hidden=!!s;
+  if(!s){
+    var sel=$("eWorker");sel.textContent="";
+    D.workers.slice().sort(function(a,b){return a[0].localeCompare(b[0],"he");}).forEach(function(w){
+      var o=el("option",null,w[0]+" · "+w[1]);o.value=w[1];sel.appendChild(o);
+    });
+    var w0=D.workers.filter(function(w){return w[1]===sel.value;})[0];
+    $("eBreak").value=w0?w0[5]:0;
+  }
+  $("eIn").value=s?wall(s[3]):"";
+  $("eOut").value=s&&s[4]?wall(s[4]):"";
+  if(s)$("eBreak").value=s[5];
+  $("eCancelShift").hidden=!s;$("eCancelSure").hidden=true;
+  $("eErr").hidden=true;$("sheet").hidden=false;calc();
+}
+function closeEdit(){editing=null;$("sheet").hidden=true;}
+function calc(){
+  var a=$("eIn").value,b=$("eOut").value,c=$("eCalc");
+  if(!a||!b){c.textContent=a?"המשמרת תישאר פתוחה.":"";return;}
+  // הפרש לפי שעון-קיר, לתצוגה בלבד. החישוב הקובע נעשה בשרת, כולל מעבר שעון קיץ וחורף.
+  var m=Math.round((new Date(b+":00Z")-new Date(a+":00Z"))/60000),br=Math.max(0,+$("eBreak").value||0);
+  c.textContent=m>0?"משך: "+dur(m)+" · לתשלום: "+dur(Math.max(0,m-br)):"היציאה חייבת להיות אחרי הכניסה.";
+}
+["eIn","eOut","eBreak"].forEach(function(id){$(id).addEventListener("input",calc);});
+$("eWorker").addEventListener("change",function(){
+  var v=$("eWorker").value,w=D.workers.filter(function(x){return x[1]===v;})[0];
+  if(w)$("eBreak").value=w[5];calc();
+});
+$("eNow").addEventListener("click",function(){$("eOut").value=wall(Date.now());calc();});
+$("eClose").addEventListener("click",closeEdit);
+$("sheet").addEventListener("click",function(e){if(e.target===$("sheet"))closeEdit();});
+$("eCancelShift").addEventListener("click",function(){$("eCancelShift").hidden=true;$("eCancelSure").hidden=false;});
+function send(body){
+  if(saving)return;
+  saving=true;$("eSave").disabled=true;$("eErr").hidden=true;
+  body.pin=pin;
+  fetch(API,{method:"POST",credentials:"omit",body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(r){
+    saving=false;$("eSave").disabled=false;
+    if(!r||!r.ok){var e=$("eErr");e.textContent=ERR[r&&r.error]||ERR.net;e.hidden=false;return;}
+    closeEdit();load(D.ym);
+  }).catch(function(){
+    saving=false;$("eSave").disabled=false;var e=$("eErr");e.textContent=ERR.net;e.hidden=false;
+  });
+}
+$("editForm").addEventListener("submit",function(e){
+  e.preventDefault();
+  if(!editing)return;
+  var s=editing.s,inStr=$("eIn").value.slice(0,16),outStr=$("eOut").value.slice(0,16);
+  if(!inStr){var er=$("eErr");er.textContent="חסרה שעת כניסה.";er.hidden=false;return;}
+  var body={inStr:inStr,outStr:outStr,breakMin:Math.round(+$("eBreak").value||0)};
+  if(s){body.action="adminSave";body.row=s[7];body.phone=s[1];body.start0=s[3];}
+  else{body.action="adminAdd";body.phone=$("eWorker").value;}
+  send(body);
+});
+$("eCancelSure").addEventListener("click",function(){
+  if(!editing||!editing.s)return;
+  var s=editing.s;
+  send({action:"adminSave",cancel:true,row:s[7],phone:s[1],start0:s[3]});
+});
+
+function deviceDecision(phone,approve){
+  if(saving)return;saving=true;
+  fetch(API,{method:"POST",credentials:"omit",body:JSON.stringify({action:"adminDevice",pin:pin,phone:phone,approve:approve})})
+    .then(function(r){return r.json();}).then(function(){saving=false;load(D.ym);},function(){saving=false;load(D.ym);});
+}
+function load(month){
+  $("loading").hidden=false;$("login").hidden=true;
+  var body={action:"admin",pin:pin};if(month)body.ym=month;
+  fetch(API,{method:"POST",credentials:"omit",body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(r){
+    $("loading").hidden=true;
+    if(!r||!r.ok){
+      D=null;var e=$("loginErr");
+      if(pin){e.textContent=ERR[r&&r.error]||ERR.net;e.hidden=false;}
+      if(r&&r.error==="pin"){pin="";try{localStorage.removeItem(PKEY);}catch(x){}}
+      render();return;
+    }
+    D=r;try{localStorage.setItem(PKEY,pin);}catch(x){}
+    $("loginErr").hidden=true;render();
+  }).catch(function(){
+    $("loading").hidden=true;var e=$("loginErr");e.textContent=ERR.net;e.hidden=false;render();
+  });
+}
+$("loginForm").addEventListener("submit",function(e){e.preventDefault();pin=$("pin").value.trim();if(pin)load();});
+$("tabs").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;tab=b.dataset.t;render();});
+$("reload").addEventListener("click",function(){load(D?D.ym:"");});
+if(pin)load();else render();
+})();
+</script>
+</body>
+</html>

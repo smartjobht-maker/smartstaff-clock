@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>שעון נוכחות</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&family=Noto+Sans+Sinhala:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f2f5f9; --surface:#ffffff; --fg:#10263f; --muted:#5b6c82; --line:#d8e0ea;
+  --brand-bg:#12305a; --brand-fg:#ffffff; --teal:#12a5a2;
+  --go:#17914f; --stop:#cf3d36; --warn:#a96a10; --warn-bg:#fdf3dc; --ok-bg:#e2f5ea; --stop-bg:#fde6e4; --on-strong:#ffffff;
+  --font:"Rubik","Noto Sans Sinhala",system-ui,"Segoe UI",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root{
+  --bg:#0a1524; --surface:#13233a; --fg:#e9eff7; --muted:#9fb1c7; --line:#263a52;
+  --brand-bg:#0f294d; --teal:#35d0cc;
+  --go:#22a862; --stop:#e0554d; --warn:#f0b54a; --warn-bg:#3a2c0e; --ok-bg:#12331f; --stop-bg:#401916;
+  color-scheme:dark } }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:17px;line-height:1.45}
+.band{background:var(--brand-bg);color:var(--brand-fg)}
+.wrap{max-width:440px;margin:0 auto;padding-left:16px;padding-right:16px}
+.band .wrap{padding-top:14px;padding-bottom:16px;display:flex;flex-direction:column;gap:12px}
+.logo{font-weight:700;font-size:24px}
+.langs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.langs button{font:inherit;font-size:15px;font-weight:500;padding:10px 4px;border-radius:10px;border:1.5px solid rgba(255,255,255,.35);background:transparent;color:var(--brand-fg);cursor:pointer;min-width:0}
+.langs button[aria-pressed="true"]{background:#fff;color:#12305a;border-color:#fff}
+main.wrap{padding-top:20px;padding-bottom:32px;display:flex;flex-direction:column;gap:18px}
+h1{font-size:24px;margin:0}
+p{margin:0}
+.muted{color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px}
+label{display:flex;flex-direction:column;gap:6px;font-weight:500}
+input{font:inherit;font-size:20px;padding:14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);width:100%}
+.btn{font:inherit;font-size:20px;font-weight:700;padding:16px;border-radius:12px;border:0;background:var(--brand-bg);color:var(--brand-fg);cursor:pointer}
+.btn:disabled,.punch:disabled{opacity:.55}
+.err{color:var(--stop);font-weight:500}
+.clockface{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.now{font-size:54px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.punch{align-self:center;width:min(230px,70vw);aspect-ratio:1;max-width:100%;border-radius:50%;border:0;color:var(--on-strong);font:inherit;font-weight:700;font-size:38px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:0 10px 24px rgba(16,38,63,.22)}
+.punch.in{background:var(--go)} .punch.out{background:var(--stop)}
+.punch svg{width:44px;height:44px}
+.hint{text-align:center;font-size:18px}
+.note{border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:2px;text-align:center}
+.note b{font-size:20px}
+.note.ok{background:var(--ok-bg);color:var(--go)}
+.note.warn{background:var(--warn-bg);color:var(--warn)}
+.note.bad{background:var(--stop-bg);color:var(--stop)}
+.month{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.month .big{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.link{background:none;border:0;font:inherit;font-size:15px;color:var(--muted);text-decoration:underline;cursor:pointer;align-self:center;padding:6px}
+.flash{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--on-strong);text-align:center;padding:24px;cursor:pointer}
+.flash.in{background:var(--go)} .flash.out{background:var(--stop)}
+.flash svg{width:120px;height:120px}
+.flash b{font-size:32px}
+.flash .time{font-size:64px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.flash .sub{font-size:18px}
+:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <div class="logo" id="logo">&nbsp;</div>
+  <div class="langs" id="langs">
+    <button type="button" data-l="he">עברית</button>
+    <button type="button" data-l="en">English</button>
+    <button type="button" data-l="ru">Русский</button>
+    <button type="button" data-l="si">සිංහල</button>
+  </div>
+</div></div>
+
+<main class="wrap">
+  <section id="reg" class="panel" hidden>
+    <h1 id="regTitle"></h1>
+    <p class="muted" id="regSub"></p>
+    <form id="regForm" novalidate style="display:flex;flex-direction:column;gap:14px">
+      <label><span id="lblName"></span><input id="inName" autocomplete="name"></label>
+      <label><span id="lblPhone"></span><input id="inPhone" inputmode="tel" autocomplete="tel" dir="ltr" placeholder="05X-XXXXXXX" maxlength="16"></label>
+      <p class="err" id="regErr" role="alert" hidden></p>
+      <button class="btn" id="btnSave" type="submit"></button>
+    </form>
+  </section>
+
+  <section id="clock" hidden style="display:flex;flex-direction:column;gap:18px">
+    <div class="clockface">
+      <h1 id="hello"></h1>
+      <div class="now" id="now" dir="ltr">--:--</div>
+      <p class="muted" id="since"></p>
+    </div>
+    <div id="devNote" class="note warn" hidden></div>
+    <div id="note" class="note" role="status" aria-live="polite" hidden></div>
+    <button type="button" id="punch" class="punch in"></button>
+    <p class="hint muted" id="hint"></p>
+    <div class="panel" id="forgot" hidden>
+      <h1 id="fTitle" style="font-size:20px"></h1>
+      <label><span id="fSub"></span><input id="fTime" type="time" dir="ltr"></label>
+      <p class="err" id="fErr" role="alert" hidden></p>
+      <button type="button" class="btn" id="fSave"></button>
+    </div>
+    <div class="panel month" id="month" hidden>
+      <b id="monthLbl"></b>
+      <span><span class="big" id="monthHours" dir="ltr"></span> <span class="muted" id="monthShifts"></span></span>
+    </div>
+    <button type="button" class="link" id="notMe"></button>
+  </section>
+</main>
+
+<div id="flash" class="flash" hidden role="status">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5.5 5.5L20 7"/></svg>
+  <b id="flashT"></b><span class="time" id="flashH" dir="ltr"></span><span class="sub" id="flashS"></span>
+</div>
+
+<script>
+(function(){
+/* כשהדף מוגש מתוך Apps Script שני הערכים האלה מתמלאים לבד.
+   באירוח נפרד: להדביק ב-FALLBACK_API את כתובת ה-Web App, ולהוסיף לכתובת הדף ?s=cargo */
+var API="{{API}}", SITE="{{SITE}}";
+var FALLBACK_API="https://script.google.com/macros/s/AKfycbxuPKpyGz3-vljCmhHnRMfUZKH388KcnB57z2h91H2Kqr72WVtO06L3qRelOjYMgA-S/exec";
+if(API.charAt(0)==="{")API=FALLBACK_API;
+if(SITE.charAt(0)==="{"||!SITE){
+  var m=/[?&]s=([a-z0-9_-]+)/i.exec(location.search);SITE=m?m[1]:"cargo";
+}
+
+var T={
+he:{dir:"rtl",regTitle:"רישום חד-פעמי",regSub:"כותבים שם וטלפון פעם אחת. בפעם הבאה רק לוחצים על הכפתור.",name:"שם מלא",phone:"טלפון נייד",save:"שמירה",hello:"שלום",start:"כניסה",end:"יציאה",tapStart:"לחצו כדי להתחיל משמרת",tapEnd:"לחצו כדי לסיים משמרת",since:"המשמרת התחילה ב־",okIn:"הכניסה נרשמה",okOut:"היציאה נרשמה",verified:"המיקום אומת",unverified:"נרשם בלי מיקום. המנהל יבדוק.",far:"אתם לא באתר",farSub:"אפשר להחתים רק מתוך האתר. התקרבו ונסו שוב.",notMe:"זה לא אני",errName:"צריך לכתוב שם",errPhone:"צריך מספר נייד ישראלי תקין (05X-XXXXXXX)",dup:"כבר נרשם ב־",fTitle:"לא סומנה יציאה במשמרת הקודמת",fSub:"באיזו שעה סיימתם?",fSave:"אישור",devPending:"הנייד הזה ממתין לאישור המנהל.",fErr:"השעה לא מתאימה. בדקו ונסו שוב.",locating:"בודק מיקום…",offline:"נשמר בנייד. יישלח אוטומטית.",errNet:"אין חיבור לאינטרנט. נסו שוב.",month:"החודש",shifts:"משמרות",pending:"ממתין לשליחה"},
+en:{dir:"ltr",regTitle:"One-time sign-up",regSub:"Enter your name and phone once. Next time you only press the button.",name:"Full name",phone:"Mobile phone",save:"Save",hello:"Hello",start:"Start",end:"End",tapStart:"Press to start your shift",tapEnd:"Press to end your shift",since:"Shift started at ",okIn:"Start recorded",okOut:"End recorded",verified:"Location confirmed",unverified:"Recorded without location. The manager will check.",far:"You are not at the site",farSub:"You can only clock in at the site. Come closer and try again.",notMe:"This is not me",errName:"Please enter your name",errPhone:"Enter a valid Israeli mobile number (05X-XXXXXXX)",dup:"Already recorded at ",fTitle:"Your last shift has no end time",fSub:"What time did you finish?",fSave:"Confirm",devPending:"This phone is waiting for the manager's approval.",fErr:"That time does not fit. Check and try again.",locating:"Checking location…",offline:"Saved on the phone. It will be sent automatically.",errNet:"No internet connection. Try again.",month:"This month",shifts:"shifts",pending:"Waiting to be sent"},
+ru:{dir:"ltr",regTitle:"Регистрация один раз",regSub:"Введите имя и телефон один раз. В следующий раз нужно только нажать кнопку.",name:"Имя и фамилия",phone:"Мобильный телефон",save:"Сохранить",hello:"Здравствуйте",start:"Вход",end:"Выход",tapStart:"Нажмите, чтобы начать смену",tapEnd:"Нажмите, чтобы закончить смену",since:"Смена началась в ",okIn:"Вход записан",okOut:"Выход записан",verified:"Местоположение подтверждено",unverified:"Записано без местоположения. Менеджер проверит.",far:"Вы не на объекте",farSub:"Отмечаться можно только на объекте. Подойдите ближе и попробуйте снова.",notMe:"Это не я",errName:"Введите имя",errPhone:"Введите израильский мобильный номер (05X-XXXXXXX)",dup:"Уже записано в ",fTitle:"В прошлой смене не отмечен выход",fSub:"Во сколько вы закончили?",fSave:"Подтвердить",devPending:"Этот телефон ожидает подтверждения менеджера.",fErr:"Время не подходит. Проверьте и попробуйте снова.",locating:"Проверяем местоположение…",offline:"Сохранено в телефоне. Отправится автоматически.",errNet:"Нет интернета. Попробуйте снова.",month:"В этом месяце",shifts:"смен",pending:"Ожидает отправки"},
+si:{dir:"ltr",regTitle:"එක් වරක් ලියාපදිංචිය",regSub:"නම සහ දුරකථන අංකය එක් වරක් ඇතුළත් කරන්න. ඊළඟ වතාවේ බොත්තම පමණක් ඔබන්න.",name:"සම්පූර්ණ නම",phone:"ජංගම දුරකථන අංකය",save:"සුරකින්න",hello:"ආයුබෝවන්",start:"ආරම්භය",end:"අවසානය",tapStart:"වැඩ මුරය ආරම්භ කිරීමට ඔබන්න",tapEnd:"වැඩ මුරය අවසන් කිරීමට ඔබන්න",since:"වැඩ මුරය ආරම්භ වූයේ: ",okIn:"ආරම්භය සටහන් විය",okOut:"අවසානය සටහන් විය",verified:"ස්ථානය තහවුරු විය",unverified:"ස්ථානය නොමැතිව සටහන් විය. කළමනාකරු පරීක්ෂා කරයි.",far:"ඔබ වැඩ බිමේ නැත",farSub:"වැඩ බිම තුළ සිට පමණක් සටහන් කළ හැක. ළඟට පැමිණ නැවත උත්සාහ කරන්න.",notMe:"මේ මම නොවේ",errName:"නම ඇතුළත් කරන්න",errPhone:"නිවැරදි ඊශ්‍රායල ජංගම අංකයක් ඇතුළත් කරන්න (05X-XXXXXXX)",dup:"දැනටමත් සටහන් වී ඇත: ",fTitle:"පසුගිය වැඩ මුරයේ අවසානය සටහන් වී නැත",fSub:"ඔබ වැඩ අවසන් කළේ කීයටද?",fSave:"තහවුරු කරන්න",devPending:"මෙම දුරකථනය කළමනාකරුගේ අනුමැතිය බලා සිටී.",fErr:"වේලාව නොගැලපේ. පරීක්ෂා කර නැවත උත්සාහ කරන්න.",locating:"ස්ථානය පරීක්ෂා කරමින්…",offline:"දුරකථනයේ සුරැකිණි. ස්වයංක්‍රීයව යවනු ලැබේ.",errNet:"අන්තර්ජාල සම්බන්ධතාවක් නැත. නැවත උත්සාහ කරන්න.",month:"මේ මාසය",shifts:"වැඩ මුර",pending:"යැවීමට බලා සිටී"}
+};
+
+var KEY="ss-clock-"+SITE;
+var S={lang:"he",worker:null,device:"",queue:[],openSince:null,site:null,month:null};
+try{var saved=JSON.parse(localStorage.getItem(KEY)||"null");if(saved){for(var k in saved)S[k]=saved[k];}}catch(e){}
+if(!T[S.lang])S.lang="he";
+if(!S.device){S.device="d"+Date.now().toString(36)+Math.random().toString(36).slice(2,10);}
+var note=null,busy=false,stale=false;
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+save();
+function $(id){return document.getElementById(id);}
+function hm(ts){var d=new Date(ts);return ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);}
+function api(payload){
+  payload.site=SITE;payload.device=S.device;
+  return fetch(API,{method:"POST",credentials:"omit",body:JSON.stringify(payload)}).then(function(r){return r.json();});
+}
+function dist(lat1,lng1,lat2,lng2){
+  var R=6371000,k=Math.PI/180,a=Math.sin((lat2-lat1)*k/2),b=Math.sin((lng2-lng1)*k/2);
+  return 2*R*Math.asin(Math.sqrt(a*a+Math.cos(lat1*k)*Math.cos(lat2*k)*b*b));
+}
+function getLoc(){
+  return new Promise(function(res){
+    if(!navigator.geolocation){res(null);return;}
+    var done=false,timer=setTimeout(function(){if(!done){done=true;res(null);}},13000);
+    navigator.geolocation.getCurrentPosition(function(p){
+      if(done)return;done=true;clearTimeout(timer);
+      res({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy)});
+    },function(){if(done)return;done=true;clearTimeout(timer);res(null);},
+    {enableHighAccuracy:true,timeout:12000,maximumAge:0});
+  });
+}
+
+var ICON_IN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h12M12 6l6 6-6 6"/></svg>';
+var ICON_OUT='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
+
+function render(){
+  var t=T[S.lang];
+  document.documentElement.lang=S.lang;document.documentElement.dir=t.dir;
+  if(S.site)$("logo").textContent=S.lang==="he"?S.site.he:S.site.en;
+  Array.prototype.forEach.call($("langs").children,function(b){b.setAttribute("aria-pressed",b.dataset.l===S.lang);});
+  $("reg").hidden=!!S.worker;$("clock").hidden=!S.worker;
+  $("regTitle").textContent=t.regTitle;$("regSub").textContent=t.regSub;
+  $("lblName").textContent=t.name;$("lblPhone").textContent=t.phone;$("btnSave").textContent=t.save;
+  $("btnSave").disabled=busy;
+  if(!S.worker)return;
+  $("hello").textContent=t.hello+", "+S.worker.name;
+  $("since").textContent=S.openSince?t.since+hm(S.openSince):"";
+  var p=$("punch");
+  p.className="punch "+(S.openSince?"out":"in");
+  p.innerHTML=(S.openSince?ICON_OUT:ICON_IN)+"<span></span>";
+  p.lastChild.textContent=S.openSince?t.end:t.start;
+  p.disabled=busy;
+  $("hint").textContent=busy?t.locating:(S.queue.length?t.pending+" ("+S.queue.length+")":(S.openSince?t.tapEnd:t.tapStart));
+  var isStale=stale||!!(S.openSince&&!S.queue.length&&S.site&&S.site.cap&&Date.now()-S.openSince>S.site.cap*3600000);
+  $("forgot").hidden=!isStale;p.hidden=isStale;$("hint").hidden=isStale;
+  $("fTitle").textContent=t.fTitle;$("fSub").textContent=t.fSub;$("fSave").textContent=t.fSave;$("fSave").disabled=busy;
+  $("notMe").textContent=t.notMe;
+  $("devNote").hidden=!S.devicePending;$("devNote").textContent=t.devPending;
+  var n=$("note");
+  if(note){
+    n.hidden=false;n.textContent="";
+    var b=document.createElement("b"),s=document.createElement("span");
+    if(note.kind==="far"){n.className="note bad";b.textContent=t.far;s.textContent=t.farSub;}
+    else if(note.kind==="dup"){n.className="note warn";b.textContent=t.dup+hm(note.ts);}
+    else if(note.kind==="net"){n.className="note bad";b.textContent=t.errNet;}
+    else{n.className="note "+(note.verified?"ok":"warn");
+      b.textContent=(note.kind==="in"?t.okIn:t.okOut)+" · "+hm(note.ts);
+      s.textContent=note.queued?t.offline:(note.verified?t.verified:t.unverified);}
+    n.appendChild(b);n.appendChild(s);
+  }else n.hidden=true;
+  var mo=S.month;
+  $("month").hidden=!mo;
+  if(mo){
+    $("monthLbl").textContent=t.month;
+    $("monthHours").textContent=Math.floor(mo.minutes/60)+":"+("0"+(mo.minutes%60)).slice(-2);
+    $("monthShifts").textContent="· "+mo.shifts+" "+t.shifts;
+  }
+}
+function tick(){$("now").textContent=hm(Date.now());}
+
+var flashTimer;
+function flash(kind,ts,sub){
+  var t=T[S.lang],f=$("flash");
+  f.className="flash "+kind;$("flashT").textContent=kind==="in"?t.okIn:t.okOut;
+  $("flashH").textContent=hm(ts);$("flashS").textContent=sub||"";
+  f.hidden=false;
+  try{if(navigator.vibrate)navigator.vibrate(200);}catch(e){}
+  clearTimeout(flashTimer);flashTimer=setTimeout(function(){f.hidden=true;},sub?4000:2200);
+}
+$("flash").addEventListener("click",function(){$("flash").hidden=true;});
+
+function applyState(r){
+  if(!r||!r.ok)return;
+  S.site=r.site;
+  if(S.worker&&r.known){
+    S.worker.name=r.name;
+    if(!S.queue.length){S.openSince=r.openSince;stale=!!r.stale;}
+    S.month=r.month||null;S.devicePending=!!r.devicePending;
+  }
+  save();render();
+}
+function refresh(){
+  var payload={action:"state",phone:S.worker?S.worker.phone:""};
+  return api(payload).then(function(r){
+    if(r&&r.ok&&S.worker&&!r.known){
+      return api({action:"register",name:S.worker.name,phone:S.worker.phone}).then(function(){return api(payload);}).then(applyState);
+    }
+    applyState(r);
+  }).catch(function(){render();});
+}
+var flushing=null;
+function flush(){
+  if(flushing)return flushing;   // רק שליחה אחת בכל רגע, כדי שהחתמה לא תישלח או תימחק פעמיים
+  function step(){
+    if(!S.queue.length)return Promise.resolve();
+    var item=S.queue[0];
+    item.age=Date.now()-item.clientTs;   // כמה זמן עבר מאז הלחיצה
+    return api(item).then(function(r){
+      if(!r||!r.ok)return;               // נשאר בתור וינוסה שוב
+      S.queue.shift();save();
+      return step();
+    });
+  }
+  flushing=step().catch(function(){}).then(function(){flushing=null;});
+  return flushing;
+}
+function sync(){return flush().then(refresh);}
+
+function enqueue(payload,loc){
+  var t=T[S.lang],now=Date.now();
+  var verified=false;
+  if(loc&&S.site){
+    var d=dist(loc.lat,loc.lng,S.site.lat,S.site.lng),acc=loc.acc||0;
+    verified=d<=S.site.radius;
+    if(!verified&&!(acc>1500||d-acc<=S.site.radius)){note={kind:"far"};return;}
+  }
+  payload.queued=true;payload.clientTs=now;
+  S.queue.push(payload);
+  var kind=S.openSince?"out":"in";
+  S.openSince=kind==="in"?now:null;
+  note={kind:kind,ts:now,verified:verified,queued:true};
+  save();flash(kind,now,t.offline);
+}
+$("punch").addEventListener("click",function(){
+  if(busy||!S.worker)return;
+  busy=true;note=null;render();
+  getLoc().then(function(loc){
+    var payload={action:"punch",phone:S.worker.phone,kind:S.openSince?"out":"in"};
+    if(loc){payload.lat=loc.lat;payload.lng=loc.lng;payload.acc=loc.acc;}
+    if(navigator.onLine===false||S.queue.length){enqueue(payload,loc);return;}
+    return api(payload).then(function(r){
+      if(r&&r.error==="site"){note={kind:"net"};return;}
+      if(!r||!r.ok){enqueue(payload,loc);return;}   // השרת עמוס: שומרים את שעת הלחיצה ושולחים שוב
+      if(r.result==="in"||r.result==="out"){
+        S.openSince=r.result==="in"?r.ts:null;
+        note={kind:r.result,ts:r.ts,verified:r.verified};save();flash(r.result,r.ts);
+      }else if(r.result==="far"){note={kind:"far"};}
+      else if(r.result==="dup"){note={kind:"dup",ts:r.ts};}
+      else if(r.result==="stale"){S.openSince=r.openSince;stale=true;save();}
+      else if(r.result==="unknown"){S.worker=null;save();}
+      else if(r.result==="device"){S.devicePending=true;save();}
+    },function(){enqueue(payload,loc);});
+  }).catch(function(){note={kind:"net"};}).then(function(){busy=false;render();sync();});
+});
+
+$("regForm").addEventListener("submit",function(e){
+  e.preventDefault();if(busy)return;
+  var t=T[S.lang],err=$("regErr");
+  var name=$("inName").value.trim(),digits=$("inPhone").value.replace(/\D/g,"");
+  if(name.length<2){err.textContent=t.errName;err.hidden=false;return;}
+  if(digits.indexOf("972")===0)digits="0"+digits.slice(3);
+  if(!/^05\d{8}$/.test(digits)){err.textContent=t.errPhone;err.hidden=false;return;}
+  err.hidden=true;busy=true;render();
+  api({action:"register",name:name,phone:digits}).then(function(r){
+    busy=false;
+    if(!r||!r.ok){err.textContent=r&&r.error==="input"?t.errPhone:t.errNet;err.hidden=false;render();return;}
+    S.worker={name:r.name,phone:digits};save();render();refresh();
+  },function(){busy=false;err.textContent=t.errNet;err.hidden=false;render();});
+});
+
+$("fSave").addEventListener("click",function(){
+  var t=T[S.lang],v=$("fTime").value,err=$("fErr");
+  if(!v||!S.openSince||busy)return;
+  var d=new Date(S.openSince),p=v.split(":");
+  d.setHours(+p[0],+p[1],0,0);
+  if(d.getTime()<=S.openSince)d.setDate(d.getDate()+1);
+  err.hidden=true;busy=true;render();
+  api({action:"forgot",phone:S.worker.phone,endTs:d.getTime()}).then(function(r){
+    busy=false;
+    if(!r||!r.ok){err.textContent=r&&r.error==="time"?t.fErr:t.errNet;err.hidden=false;render();return;}
+    stale=false;S.openSince=null;$("fTime").value="";save();render();refresh();
+  },function(){busy=false;err.textContent=t.errNet;err.hidden=false;render();});
+});
+
+$("langs").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.lang=b.dataset.l;save();render();});
+$("notMe").addEventListener("click",function(){
+  if(S.queue.length)return;   // לא מוחקים זיהוי כשיש החתמה שעוד לא נשלחה
+  S.worker=null;S.openSince=null;S.month=null;stale=false;note=null;save();render();
+});
+window.addEventListener("online",sync);
+document.addEventListener("visibilitychange",function(){if(!document.hidden&&!busy)sync();});
+
+setInterval(function(){if(S.queue.length&&!busy)sync();},20000);
+render();tick();setInterval(function(){tick();if(!busy)render();},15000);sync();
+})();
+</script>
+</body>
+</html>
